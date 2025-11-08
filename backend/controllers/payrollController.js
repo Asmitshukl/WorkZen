@@ -1,5 +1,6 @@
 const Payroll = require('../models/Payroll');
 const Payslip = require('../models/Payslip');
+const Employee = require('../models/Employee');
 const SalaryCalculator = require('../utils/salaryCalculator');
 const { sendPayslipEmail } = require('../utils/emailService');
 const PDFGenerator = require('../utils/pdfGenerator');
@@ -27,7 +28,7 @@ exports.generatePayrun = async (req, res) => {
     for (const employee of employees) {
       const workedDays = await SalaryCalculator.calculateWorkedDays(employee.id, month, year);
       
-      const fullSalary = parseFloat(employee.salary_info.wage);
+      const fullSalary = parseFloat(employee.salary_info?.wage || 30000);
       const proRataSalary = SalaryCalculator.calculateProRataSalary(
         fullSalary,
         workedDays.totalDays,
@@ -162,7 +163,7 @@ exports.validatePayrun = async (req, res) => {
       
       await Payslip.update(fullPayslip.id, { status: 'Validated' });
 
-      
+      // Send payslip email to employee
       const employee = fullPayslip.employee;
       await sendPayslipEmail(
         employee.email,
@@ -257,9 +258,13 @@ exports.downloadPayslipPDF = async (req, res) => {
       if (err) {
         console.error('Error downloading file:', err);
       }
-      
+      // Clean up temp file
       const fs = require('fs');
-      fs.unlinkSync(pdfPath);
+      try {
+        fs.unlinkSync(pdfPath);
+      } catch (error) {
+        console.error('Error deleting temp file:', error);
+      }
     });
   } catch (error) {
     res.status(500).json({

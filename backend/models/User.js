@@ -112,7 +112,7 @@ class User {
     let paramCount = 1;
     
     Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined && key !== 'password') {
+      if (updates[key] !== undefined) {
         const dbKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
         fields.push(`${dbKey} = $${paramCount}`);
         values.push(updates[key]);
@@ -131,6 +131,24 @@ class User {
     `;
     
     const result = await query(sql, values);
+    return result.rows[0];
+  }
+  
+  static async updateRole(userId, newRole) {
+    const validRoles = ['Admin', 'HR Officer', 'Payroll Officer', 'Manager', 'Employee'];
+    
+    if (!validRoles.includes(newRole)) {
+      throw new Error('Invalid role');
+    }
+    
+    const sql = `
+      UPDATE users 
+      SET role = $1, updated_at = NOW() 
+      WHERE id = $2 
+      RETURNING *
+    `;
+    
+    const result = await query(sql, [newRole, userId]);
     return result.rows[0];
   }
   

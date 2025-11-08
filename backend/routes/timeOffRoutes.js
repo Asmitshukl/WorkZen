@@ -1,3 +1,4 @@
+// backend/routes/timeOffRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -9,18 +10,19 @@ const {
   deleteTimeOffRequest
 } = require('../controllers/timeOffController');
 const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/roleCheck');
+const { canApproveTimeOff } = require('../middleware/roleCheck');
 const { timeOffValidation, validate } = require('../middleware/validation');
-const { ROLES } = require('../config/constants');
 
 router.use(protect);
 
+// Employee time off requests
 router.post('/', timeOffValidation, validate, requestTimeOff);
 router.get('/my-requests', getMyTimeOffRequests);
 router.delete('/:id', deleteTimeOffRequest);
 
-router.get('/all', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), getAllTimeOffRequests);
-router.put('/:id/approve', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), approveTimeOff);
-router.put('/:id/reject', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), rejectTimeOff);
+// Approve/Reject - Admin, HR Officer, Payroll Officer, Manager
+router.get('/all', canApproveTimeOff, getAllTimeOffRequests);
+router.put('/:id/approve', canApproveTimeOff, approveTimeOff);
+router.put('/:id/reject', canApproveTimeOff, rejectTimeOff);
 
 module.exports = router;

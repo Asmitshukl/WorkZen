@@ -1,5 +1,8 @@
 const TimeOff = require('../models/TimeOff');
+const Employee = require('../models/Employee');
+const Attendance = require('../models/Attendance');
 const { sendTimeOffApprovalEmail } = require('../utils/emailService');
+const { eachDayOfInterval, isWeekend } = require('date-fns');
 
 exports.requestTimeOff = async (req, res) => {
   try {
@@ -8,8 +11,14 @@ exports.requestTimeOff = async (req, res) => {
 
     const employee = await Employee.findById(user.employee_id);
 
-    
-    const { eachDayOfInterval, isWeekend } = require('date-fns');
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee profile not found'
+      });
+    }
+
+    // Calculate working days
     const start = new Date(startDate);
     const end = new Date(endDate);
     const allDays = eachDayOfInterval({ start, end });
@@ -109,9 +118,20 @@ exports.approveTimeOff = async (req, res) => {
       });
     }
 
+    // Check role-based approval permissions
+    const approverRole = req.user.role;
+    const allowedRoles = ['Admin', 'HR Officer', 'Payroll Officer', 'Manager'];
+    
+    if (!allowedRoles.includes(approverRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'You do not have permission to approve time off requests'
+      });
+    }
+
     const approved = await TimeOff.approve(req.params.id, req.user.id);
 
-    // Deduct from allocation
+    // Deduct from allocation (handled internally in model)
     await TimeOff.deductFromAllocation(
       timeOff.employee_id,
       timeOff.time_off_type,
@@ -119,7 +139,6 @@ exports.approveTimeOff = async (req, res) => {
     );
 
     // Mark attendance as on leave for these dates
-    const { eachDayOfInterval, isWeekend } = require('date-fns');
     const start = new Date(timeOff.start_date);
     const end = new Date(timeOff.end_date);
     const allDays = eachDayOfInterval({ start, end });
@@ -144,7 +163,7 @@ exports.approveTimeOff = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Time off approved successfully',
+      message: `Time off approved by ${approverRole}`,
       data: approved
     });
   } catch (error) {

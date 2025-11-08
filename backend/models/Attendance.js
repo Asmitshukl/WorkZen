@@ -147,32 +147,33 @@ class Attendance {
   }
   
   static async markLeave(employeeId, date) {
-    const checkSql = `SELECT id FROM attendance WHERE employee_id = $1 AND date = $2`;
-    const checkResult = await query(checkSql, [employeeId, date]);
+  const checkSql = `SELECT id FROM attendance WHERE employee_id = $1 AND date = $2`;
+  const checkResult = await query(checkSql, [employeeId, date]);
+  
+  if (checkResult.rows.length > 0) {
+    // Update existing record
+    const sql = `
+      UPDATE attendance
+      SET status = 'On Leave'
+      WHERE employee_id = $1 AND date = $2
+      RETURNING *
+    `;
     
-    if (checkResult.rows.length > 0) {
-      // Update existing record
-      const sql = `
-        UPDATE attendance
-        SET status = 'On Leave'
-        WHERE employee_id = $1 AND date = $2
-        RETURNING *
-      `;
-      
-      const result = await query(sql, [employeeId, date]);
-      return result.rows[0];
-    } else {
-      // Create new record
-      const sql = `
-        INSERT INTO attendance (employee_id, date, status)
-        VALUES ($1, $2, 'On Leave')
-        RETURNING *
-      `;
-      
-      const result = await query(sql, [employeeId, date]);
-      return result.rows[0];
-    }
+    const result = await query(sql, [employeeId, date]);
+    return result.rows[0];
+  } else {
+    // Create new record
+    const sql = `
+      INSERT INTO attendance (employee_id, date, status)
+      VALUES ($1, $2, 'On Leave')
+      RETURNING *
+    `;
+    
+    const result = await query(sql, [employeeId, date]);
+    return result.rows[0];
   }
+}
+
   
   static async markAbsent(employeeId, date) {
     const checkSql = `SELECT id FROM attendance WHERE employee_id = $1 AND date = $2`;

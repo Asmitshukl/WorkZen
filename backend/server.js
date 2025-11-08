@@ -23,8 +23,8 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true}));
 app.use(sanitizeInput);
 
 // Rate limiting for API routes
@@ -54,7 +54,6 @@ app.use((req, res) => {
   });
 });
 
-// Error handling middleware (must be last)
 app.use(errorHandler);
 
 // Start server

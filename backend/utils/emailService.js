@@ -3,7 +3,7 @@ const transporter = require('../config/email');
 async function sendEmail(to, subject, html) {
   try {
     const info = await transporter.sendMail({
-      from: `"${process.env.COMPANY_NAME}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.COMPANY_NAME || 'HR System'}" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html
@@ -18,10 +18,11 @@ async function sendEmail(to, subject, html) {
 }
 
 async function sendWelcomeEmail(email, name, loginId, password) {
-  const subject = `Welcome to ${process.env.COMPANY_NAME} - Your Account Details`;
+  const companyName = process.env.COMPANY_NAME || 'HR System';
+  const subject = `Welcome to ${companyName} - Your Account Details`;
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #333;">Welcome to ${process.env.COMPANY_NAME}!</h2>
+      <h2 style="color: #333;">Welcome to ${companyName}!</h2>
       <p>Dear ${name},</p>
       <p>Your employee account has been created successfully. Here are your login credentials:</p>
       
@@ -32,8 +33,9 @@ async function sendWelcomeEmail(email, name, loginId, password) {
       
       <p><strong>Important Steps:</strong></p>
       <ol>
-        <li>Verify your email with the OTP sent separately</li>
         <li>Login using your credentials</li>
+        <li>You will receive an OTP on your email</li>
+        <li>Enter the OTP to complete login</li>
         <li>Change your password upon first login for security</li>
       </ol>
       

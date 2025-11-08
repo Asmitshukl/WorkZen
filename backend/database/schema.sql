@@ -193,6 +193,20 @@ CREATE TABLE payslip_deductions (
     amount DECIMAL(12, 2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- Add to schema.sql if not exists
+CREATE TABLE IF NOT EXISTS time_off_allocations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    year INTEGER NOT NULL,
+    paid_time_off INTEGER DEFAULT 24,
+    sick_time_off INTEGER DEFAULT 7,
+    used_paid_time_off INTEGER DEFAULT 0,
+    used_sick_time_off INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(employee_id, year)
+);
+
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_login_id ON users(login_id);
@@ -219,3 +233,7 @@ CREATE TRIGGER update_attendance_updated_at BEFORE UPDATE ON attendance FOR EACH
 CREATE TRIGGER update_time_offs_updated_at BEFORE UPDATE ON time_offs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_payrolls_updated_at BEFORE UPDATE ON payrolls FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_payslips_updated_at BEFORE UPDATE ON payslips FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+CREATE INDEX idx_time_off_allocations_employee ON time_off_allocations(employee_id);
+CREATE INDEX idx_time_off_allocations_year ON time_off_allocations(year);

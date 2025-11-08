@@ -16,6 +16,7 @@ class PDFGenerator {
       
       doc.pipe(stream);
       
+      // Header
       doc.rect(0, 0, doc.page.width, 100).fill('#4472C4');
       
       doc.fillColor('white')
@@ -26,6 +27,7 @@ class PDFGenerator {
       
       doc.fillColor('black');
       
+      // Employee details
       doc.moveDown(3);
       doc.fontSize(10);
       
@@ -34,19 +36,23 @@ class PDFGenerator {
       let y = doc.y;
       
       doc.text(`Employee Name: ${employee.first_name} ${employee.last_name}`, leftCol, y);
-      doc.text(`Employee Code: ${employee.emp_code || 'N/A'}`, rightCol, y);
+      // Fixed: Added null check for emp_code
+      const empCode = employee.emp_code || employee.id || 'N/A';
+      doc.text(`Employee Code: ${empCode}`, rightCol, y);
       
       y += 20;
       doc.text(`Designation: ${employee.designation || 'N/A'}`, leftCol, y);
       doc.text(`Department: ${employee.department || 'N/A'}`, rightCol, y);
       
       y += 20;
-      doc.text(`Date of Joining: ${new Date(employee.joining_date).toLocaleDateString()}`, leftCol, y);
+      const joiningDate = employee.joining_date ? new Date(employee.joining_date).toLocaleDateString() : 'N/A';
+      doc.text(`Date of Joining: ${joiningDate}`, leftCol, y);
       doc.text(`Pay Date: ${new Date().toLocaleDateString()}`, rightCol, y);
       
       y += 20;
       doc.text(`Pay Period: ${payslipData.pay_period_start} to ${payslipData.pay_period_end}`, leftCol, y);
       
+      // Worked days section
       y += 30;
       doc.fontSize(11).font('Helvetica-Bold').text('Worked Days:', leftCol, y);
       doc.font('Helvetica').fontSize(10);
@@ -57,6 +63,7 @@ class PDFGenerator {
       y += 15;
       doc.text(`Total Days: ${payslipData.total_payable_days} days`, leftCol, y);
       
+      // Earnings and Deductions table
       y += 40;
       const tableTop = y;
       const col1X = 50;
@@ -75,45 +82,49 @@ class PDFGenerator {
       doc.font('Helvetica').fontSize(9);
       let currentY = tableTop + 20;
       
-      const maxRows = Math.max(
-        payslipData.earnings?.length || 0,
-        payslipData.deductions?.length || 0
-      );
+      // Fixed: Added null checks for earnings and deductions
+      const earnings = payslipData.earnings || [];
+      const deductions = payslipData.deductions || [];
+      const maxRows = Math.max(earnings.length, deductions.length);
       
       for (let i = 0; i < maxRows; i++) {
-        if (payslipData.earnings[i]) {
-          doc.text(payslipData.earnings[i].component, col1X, currentY, { width: 180 });
-          doc.text(payslipData.earnings[i].amount.toFixed(2), col2X, currentY);
+        if (earnings[i]) {
+          doc.text(earnings[i].component, col1X, currentY, { width: 180 });
+          doc.text(parseFloat(earnings[i].amount).toFixed(2), col2X, currentY);
         }
         
-        if (payslipData.deductions[i]) {
-          doc.text(payslipData.deductions[i].component, col3X, currentY, { width: 100 });
-          doc.text(payslipData.deductions[i].amount.toFixed(2), col4X, currentY);
+        if (deductions[i]) {
+          doc.text(deductions[i].component, col3X, currentY, { width: 100 });
+          doc.text(parseFloat(deductions[i].amount).toFixed(2), col4X, currentY);
         }
         
         currentY += 15;
       }
       
+      // Totals
       doc.moveTo(col1X, currentY).lineTo(550, currentY).stroke();
       currentY += 10;
       
       doc.font('Helvetica-Bold');
       doc.text('Gross Total', col1X, currentY);
-      doc.text(payslipData.gross_wage.toFixed(2), col2X, currentY);
+      doc.text(parseFloat(payslipData.gross_wage).toFixed(2), col2X, currentY);
       doc.text('Total Deductions', col3X, currentY);
-      doc.text(payslipData.total_deductions.toFixed(2), col4X, currentY);
+      doc.text(parseFloat(payslipData.total_deductions).toFixed(2), col4X, currentY);
       
+      // Net payable
       currentY += 30;
       doc.fillColor('#4472C4').rect(col1X - 10, currentY - 5, 520, 35).fill();
       
       doc.fillColor('white').fontSize(12);
       doc.text('Total Net Payable', col1X, currentY + 5);
-      doc.text(`₹ ${payslipData.net_wage.toFixed(2)}`, col2X, currentY + 5);
+      doc.text(`₹ ${parseFloat(payslipData.net_wage).toFixed(2)}`, col2X, currentY + 5);
       
+      // Amount in words
       currentY += 50;
       doc.fillColor('black').fontSize(10);
       doc.text(`Amount in Words: ${numberToWords(payslipData.net_wage)}`, col1X, currentY);
     
+      // Footer
       doc.moveDown(3).fontSize(8).fillColor('#666');
       doc.text('This is a system-generated document and does not require a signature.', { align: 'center' });
       
@@ -128,7 +139,7 @@ class PDFGenerator {
 function getMonthName(month) {
   const months = ['January', 'February', 'March', 'April', 'May', 'June', 
                   'July', 'August', 'September', 'October', 'November', 'December'];
-  return months[month - 1];
+  return months[month - 1] || 'Unknown';
 }
 
 function numberToWords(num) {

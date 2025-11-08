@@ -22,7 +22,16 @@ exports.setupAdmin = async (req, res) => {
       });
     }
 
-    const { name, email, phone } = req.body;
+    const { name, email, phone, companyName } = req.body;
+    
+    // Validate company name
+    if (!companyName || companyName.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Company name is required'
+      });
+    }
+
     const [firstName, ...lastNameParts] = name.split(' ');
     const lastName = lastNameParts.join(' ') || firstName;
 
@@ -31,6 +40,7 @@ exports.setupAdmin = async (req, res) => {
       lastName,
       email,
       phone,
+      company: companyName.trim(),
       joiningDate: new Date(),
       wage: 100000
     });
@@ -48,15 +58,18 @@ exports.setupAdmin = async (req, res) => {
       employeeId: employee.id
     });
 
+    // Auto-verify admin email - no OTP needed for initial setup
+    await User.update(user.id, { isEmailVerified: true });
+
     await Employee.update(employee.id, { userId: user.id });
 
-    await createAndSendOTP(email, 'signup');
+    // Send welcome email with credentials
     await sendWelcomeEmail(email, name, loginId, tempPassword);
 
     res.status(201).json({
       success: true,
-      message: 'Admin created. Please check email for OTP verification and login credentials',
-      data: { loginId, email }
+      message: 'Admin created successfully. Check email for login credentials.',
+      data: { loginId, email, company: companyName }
     });
   } catch (error) {
     res.status(500).json({
@@ -185,7 +198,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    
     await User.update(user.id, { lastLogin: new Date() });
 
     const token = generateToken(user.id);

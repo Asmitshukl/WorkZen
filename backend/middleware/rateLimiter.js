@@ -26,7 +26,6 @@ const createLimiter = (windowMs, max) => {
   };
 };
 
-// Clean up old entries every hour
 setInterval(() => {
   const now = Date.now();
   for (const [key, requests] of requestCounts.entries()) {

@@ -1,3 +1,4 @@
+// backend/routes/employeeRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -10,7 +11,7 @@ const {
   updateMyProfile
 } = require('../controllers/employeeController');
 const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/roleCheck');
+const { authorize, isHROrAdmin, isAdmin, checkPermission } = require('../middleware/roleCheck');
 const { employeeValidation, validate } = require('../middleware/validation');
 const { ROLES } = require('../config/constants');
 
@@ -19,10 +20,15 @@ router.use(protect);
 router.get('/me/profile', getMyProfile);
 router.put('/me/profile', updateMyProfile);
 
-router.get('/', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), getAllEmployees);
-router.post('/', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), employeeValidation, validate, createEmployee);
+// Employee management routes - Admin & HR Officer only
+router.get('/', isHROrAdmin, getAllEmployees);
+router.post('/', isHROrAdmin, employeeValidation, validate, createEmployee);
+
+// View employee details - Admin, HR Officer, and the employee themselves
 router.get('/:id', getEmployeeById);
-router.put('/:id', authorize(ROLES.ADMIN, ROLES.HR_OFFICER), updateEmployee);
-router.delete('/:id', authorize(ROLES.ADMIN), deleteEmployee);
+
+// Update/Delete - Admin & HR Officer only
+router.put('/:id', isHROrAdmin, updateEmployee);
+router.delete('/:id', isAdmin, deleteEmployee);
 
 module.exports = router;

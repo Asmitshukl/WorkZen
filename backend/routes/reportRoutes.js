@@ -1,3 +1,4 @@
+// backend/routes/reportRoutes.js
 const express = require('express');
 const router = express.Router();
 const {
@@ -7,11 +8,10 @@ const {
   getEmployeeCountReport
 } = require('../controllers/reportController');
 const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/roleCheck');
-const { ROLES } = require('../config/constants');
+const { canAccessReports } = require('../middleware/roleCheck');
 
 router.use(protect);
-router.use(authorize(ROLES.ADMIN, ROLES.PAYROLL_OFFICER, ROLES.HR_OFFICER));
+router.use(canAccessReports);
 
 router.get('/salary-statement', getSalaryStatement);
 router.get('/attendance-summary', getAttendanceSummary);

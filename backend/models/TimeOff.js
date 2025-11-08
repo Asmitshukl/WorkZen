@@ -3,75 +3,65 @@ const { eachDayOfInterval, isWeekend } = require('date-fns');
 
 class TimeOff {
   static async create(timeOffData) {
-    const start = new Date(timeOffData.startDate);
-    const end = new Date(timeOffData.endDate);
+    const { employeeId, timeOffType, startDate, endDate, reason, attachment } = timeOffData;
+    
+    // Calculate days
+    const start = new Date(startDate);
+    const end = new Date(endDate);
     const allDays = eachDayOfInterval({ start, end });
     const workingDays = allDays.filter(day => !isWeekend(day)).length;
     
     const sql = `
       INSERT INTO time_offs (
-        employee_id, time_off_type, start_date, end_date, days, reason, attachment
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        employee_id, time_off_type, start_date, end_date, 
+        days, reason, attachment, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending')
       RETURNING *
     `;
     
     const result = await query(sql, [
-      timeOffData.employeeId,
-      timeOffData.timeOffType,
-      timeOffData.startDate,
-      timeOffData.endDate,
+      employeeId,
+      timeOffType,
+      startDate,
+      endDate,
       workingDays,
-      timeOffData.reason || null,
-      timeOffData.attachment || null
+      reason || null,
+      attachment || null
     ]);
     
     return result.rows[0];
   }
-  
+
   static async findById(id) {
     const sql = `
-      SELECT t.*,
+      SELECT t.*, 
              json_build_object(
                'id', e.id,
                'first_name', e.first_name,
                'last_name', e.last_name,
                'email', e.email,
                'department', e.department
-             ) as employee,
-             json_build_object(
-               'id', u.id,
-               'login_id', u.login_id,
-               'email', u.email
-             ) as approved_by_user
+             ) as employee
       FROM time_offs t
       INNER JOIN employees e ON t.employee_id = e.id
-      LEFT JOIN users u ON t.approved_by = u.id
       WHERE t.id = $1
     `;
     
     const result = await query(sql, [id]);
     return result.rows[0];
   }
-  
-  static async findByEmployee(employeeId, status = null) {
-    let sql = `
+
+  static async findByEmployee(employeeId) {
+    const sql = `
       SELECT * FROM time_offs
       WHERE employee_id = $1
+      ORDER BY created_at DESC
     `;
     
-    const values = [employeeId];
-    
-    if (status) {
-      sql += ` AND status = $2`;
-      values.push(status);
-    }
-    
-    sql += ' ORDER BY created_at DESC';
-    
-    const result = await query(sql, values);
+    const result = await query(sql, [employeeId]);
     return result.rows;
   }
-  
+
   static async findAll(filters = {}) {
     let sql = `
       SELECT t.*,
@@ -107,7 +97,7 @@ class TimeOff {
     const result = await query(sql, values);
     return result.rows;
   }
-  
+
   static async approve(id, approvedBy) {
     const sql = `
       UPDATE time_offs
@@ -121,7 +111,7 @@ class TimeOff {
     const result = await query(sql, [approvedBy, id]);
     return result.rows[0];
   }
-  
+
   static async reject(id, approvedBy, reason) {
     const sql = `
       UPDATE time_offs
@@ -136,73 +126,76 @@ class TimeOff {
     const result = await query(sql, [approvedBy, reason, id]);
     return result.rows[0];
   }
-  
+
   static async delete(id) {
-    const sql = `DELETE FROM time_offs WHERE id = $1 AND status = 'Pending' RETURNING *`;
+    const sql = `
+      DELETE FROM time_offs
+      WHERE id = $1 AND status = 'Pending'
+      RETURNING *
+    `;
+    
     const result = await query(sql, [id]);
     return result.rows[0];
   }
-  
+
   static async checkAvailableBalance(employeeId, timeOffType, requestedDays) {
-    const sql = `
+    // Get employee's salary info for leave balance
+    const balanceSql = `
       SELECT paid_time_off, sick_time_off
       FROM salary_info
       WHERE employee_id = $1
     `;
     
-    const result = await query(sql, [employeeId]);
+    const balanceResult = await query(balanceSql, [employeeId]);
     
-    if (result.rows.length === 0) return { available: false, balance: 0 };
-    
-    const balance = result.rows[0];
-    let available = 0;
-    
-    if (timeOffType === 'Paid Time Off') {
-      available = balance.paid_time_off;
-    } else if (timeOffType === 'Sick Time Off') {
-      available = balance.sick_time_off;
-    } else {
-      return { available: true, balance: Infinity }; 
+    if (balanceResult.rows.length === 0) {
+      return { available: false, balance: 0, message: 'No leave allocation found' };
     }
     
+    const { paid_time_off, sick_time_off } = balanceResult.rows[0];
+    
+    // Get used leaves for current year
+    const currentYear = new Date().getFullYear();
+    const usedSql = `
+      SELECT SUM(days) as used_days
+      FROM time_offs
+      WHERE employee_id = $1
+      AND time_off_type = $2
+      AND status = 'Approved'
+      AND EXTRACT(YEAR FROM start_date) = $3
+    `;
+    
+    const usedResult = await query(usedSql, [employeeId, timeOffType, currentYear]);
+    const usedDays = parseInt(usedResult.rows[0]?.used_days || 0);
+    
+    let totalBalance = 0;
+    if (timeOffType === 'Paid Time Off') {
+      totalBalance = paid_time_off;
+    } else if (timeOffType === 'Sick Time Off') {
+      totalBalance = sick_time_off;
+    } else {
+      // Unpaid leave - always available
+      return { available: true, balance: 'Unlimited' };
+    }
+    
+    const availableBalance = totalBalance - usedDays;
+    
     return {
-      available: available >= requestedDays,
-      balance: available
+      available: availableBalance >= requestedDays,
+      balance: availableBalance,
+      requested: requestedDays,
+      message: availableBalance >= requestedDays 
+        ? 'Sufficient balance' 
+        : `Insufficient balance. Available: ${availableBalance}, Requested: ${requestedDays}`
     };
   }
-  
+
   static async deductFromAllocation(employeeId, timeOffType, days) {
-    if (timeOffType === 'Unpaid Leave') return;
-    
-    const field = timeOffType === 'Paid Time Off' ? 'paid_time_off' : 'sick_time_off';
-    
-    const sql = `
-      UPDATE salary_info
-      SET ${field} = ${field} - $1
-      WHERE employee_id = $2
-      RETURNING *
-    `;
-    
-    const result = await query(sql, [days, employeeId]);
-    return result.rows[0];
-  }
-  
-  static async restoreAllocation(employeeId, timeOffType, days) {
-    if (timeOffType === 'Unpaid Leave') return;
-    
-    const field = timeOffType === 'Paid Time Off' ? 'paid_time_off' : 'sick_time_off';
-    
-    const sql = `
-      UPDATE salary_info
-      SET ${field} = ${field} + $1
-      WHERE employee_id = $2
-      RETURNING *
-    `;
-    
-    const result = await query(sql, [days, employeeId]);
-    return result.rows[0];
+    // This is handled by the approval process
+    // The balance check is done before approval
+    // No actual deduction from salary_info table needed as we calculate dynamically
+    return true;
   }
 }
 
 module.exports = TimeOff;
-

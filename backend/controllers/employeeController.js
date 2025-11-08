@@ -63,6 +63,7 @@ exports.getEmployeeById = async (req, res) => {
   }
 };
 
+// backend/controllers/employeeController.js (Update createEmployee)
 exports.createEmployee = async (req, res) => {
   try {
     const {
@@ -70,6 +71,27 @@ exports.createEmployee = async (req, res) => {
       manager, location, joiningDate, wage, role, dateOfBirth,
       gender, maritalStatus, residingAddress, nationality
     } = req.body;
+
+    // Validate role
+    const validRoles = ['HR Officer', 'Payroll Officer', 'Manager', 'Employee'];
+    const employeeRole = role || 'Employee';
+    
+    if (!validRoles.includes(employeeRole)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Allowed roles: ${validRoles.join(', ')}`
+      });
+    }
+
+    // Only Admin can create HR Officer, Payroll Officer, and Manager roles
+    if (['HR Officer', 'Payroll Officer', 'Manager'].includes(employeeRole)) {
+      if (req.user.role !== 'Admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Only Admin can create HR Officer, Payroll Officer, or Manager roles'
+        });
+      }
+    }
 
     const existingEmployee = await Employee.findByEmail(email);
     if (existingEmployee) {
@@ -106,7 +128,7 @@ exports.createEmployee = async (req, res) => {
       loginId,
       email,
       password: tempPassword,
-      role: role || 'Employee',
+      role: employeeRole,
       employeeId: employee.id
     });
     

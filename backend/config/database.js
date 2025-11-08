@@ -1,6 +1,5 @@
 const { Pool } = require('pg');
 
-
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
@@ -63,13 +62,14 @@ const transaction = async (callback) => {
 // Cleanup old OTPs every hour
 setInterval(async () => {
   try {
-    await query('DELETE FROM otps WHERE expires_at < NOW()');
-    console.log('Cleaned up expired OTPs');
+    const result = await query('DELETE FROM otps WHERE expires_at < NOW()');
+    console.log(`Cleaned up ${result.rowCount} expired OTPs`);
   } catch (error) {
     console.error('Error cleaning up OTPs:', error.message);
   }
 }, 60 * 60 * 1000);
 
+// Test database connection on startup
 pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Database connection test failed:', err.message);
