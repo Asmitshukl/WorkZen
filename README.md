@@ -1,3 +1,6 @@
+video links -https://docs.google.com/videos/d/177eylHUiHFJatUaoUhREo45e5-jLXTBcb4vci5Mgc6Q/edit?scene=id.p#scene=id.p
+
+
 🧘‍♂️ WorkZen – Smart Human Resource Management System
 
 WorkZen is a modern, all-in-one Human Resource Management System (HRMS) designed to simplify HR operations for smarter workplaces. It helps organizations manage employees, attendance, leave, and payroll through a clean, reliable, and user-friendly interface.
