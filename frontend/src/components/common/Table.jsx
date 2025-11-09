@@ -1,4 +1,3 @@
-// src/components/common/Table.jsx
 import React from 'react';
 
 const Table = ({ columns, data, onRowClick, loading, emptyMessage = 'No data available' }) => {

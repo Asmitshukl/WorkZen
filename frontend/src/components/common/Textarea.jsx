@@ -1,4 +1,3 @@
-// src/components/common/Textarea.jsx
 import React, { forwardRef } from 'react';
 
 const Textarea = forwardRef(

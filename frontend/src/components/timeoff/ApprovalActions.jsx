@@ -1,4 +1,3 @@
-// src/components/timeoff/ApprovalActions.jsx
 import React, { useState } from 'react';
 import Button from '@components/common/Button';
 import Modal from '@components/common/Modal';

@@ -58,7 +58,7 @@ exports.setupAdmin = async (req, res) => {
       employeeId: employee.id
     });
 
-    // Auto-verify admin email - no OTP needed for initial setup
+    // Auto-verify admin email - no OTP needed
     await User.update(user.id, { isEmailVerified: true });
 
     await Employee.update(employee.id, { userId: user.id });
@@ -175,28 +175,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (!user.is_email_verified) {
-      return res.status(403).json({
-        success: false,
-        message: 'Please verify your email first'
-      });
-    }
-
-    // If OTP provided, verify it
-    if (otp) {
-      const otpResult = await verifyOTP(user.email, otp, 'login');
-      if (!otpResult.success) {
-        return res.status(400).json(otpResult);
-      }
-    } else {
-      // Send OTP if not provided
-      await createAndSendOTP(user.email, 'login');
-      return res.json({
-        success: true,
-        requiresOTP: true,
-        message: 'OTP sent to your email. Please verify to complete login.'
-      });
-    }
+    // REMOVED: Email verification check - users can login even if email not verified
+    // REMOVED: OTP verification - direct login after password validation
 
     await User.update(user.id, { lastLogin: new Date() });
 

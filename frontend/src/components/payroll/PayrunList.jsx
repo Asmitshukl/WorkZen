@@ -1,4 +1,3 @@
-// src/components/payroll/PayrunList.jsx
 import React from 'react';
 import Badge from '@components/common/Badge';
 import { formatCurrency } from '@utils/formatters';

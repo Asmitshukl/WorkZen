@@ -1,4 +1,3 @@
-// src/components/common/DatePicker.jsx
 import React, { forwardRef } from 'react';
 import { Calendar } from 'lucide-react';
 

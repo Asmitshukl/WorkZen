@@ -1,4 +1,3 @@
-// src/components/auth/ChangePassword.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { changePassword } from '@api/authAPI';

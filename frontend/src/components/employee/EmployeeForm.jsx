@@ -1,4 +1,3 @@
-// src/components/employee/EmployeeForm.jsx
 import React from 'react';
 import Input from '@components/common/Input';
 import Select from '@components/common/Select';

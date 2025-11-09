@@ -1,4 +1,3 @@
-// src/components/auth/VerifyOTP.jsx
 import React, { useState } from 'react';
 import { verifyOTP } from '@api/authAPI';
 import { useNotification } from '@hooks/useNotification';

@@ -1,4 +1,3 @@
-// src/components/timeoff/TimeOffCard.jsx
 import React from 'react';
 import Badge from '@components/common/Badge';
 import { Calendar, User } from 'lucide-react';

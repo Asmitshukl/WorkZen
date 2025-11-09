@@ -1,4 +1,3 @@
-// src/components/payroll/PayrunGenerator.jsx
 import React, { useState } from 'react';
 import { generatePayrun } from '@api/payrollAPI';
 import { useNotification } from '@hooks/useNotification';

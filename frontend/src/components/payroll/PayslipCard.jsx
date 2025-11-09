@@ -1,4 +1,3 @@
-// src/components/payroll/PayslipCard.jsx
 import React from 'react';
 import Badge from '@components/common/Badge';
 import Button from '@components/common/Button';

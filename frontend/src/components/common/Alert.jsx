@@ -1,4 +1,3 @@
-// src/components/common/Alert.jsx
 import React from 'react';
 import { AlertCircle, CheckCircle, Info, XCircle, X } from 'lucide-react';
 

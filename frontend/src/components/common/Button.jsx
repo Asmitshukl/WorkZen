@@ -1,4 +1,3 @@
-// Add icon support to Button component
 import React from 'react';
 
 const Button = ({

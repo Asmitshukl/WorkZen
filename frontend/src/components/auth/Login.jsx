@@ -16,11 +16,9 @@ const Login = () => {
   const [formData, setFormData] = useState({
     loginId: "",
     password: "",
-    otp: "",
   });
 
   const [loading, setLoading] = useState(false);
-  const [requiresOTP, setRequiresOTP] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,15 +37,11 @@ const Login = () => {
         loginId: formData.loginId,
         email: formData.loginId,
         password: formData.password,
-        otp: formData.otp || undefined,
       };
 
       const response = await loginAPI(payload);
 
-      if (response?.requiresOTP) {
-        setRequiresOTP(true);
-        showSuccess("OTP sent to your email");
-      } else if (response?.token && response?.user) {
+      if (response?.token && response?.user) {
         login(response.token, response.user);
         showSuccess("Login successful!");
 
@@ -67,70 +61,172 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-[#FFFEF5] flex items-center justify-center p-4">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&display=swap');
+        
+        .sketch-card {
+          font-family: 'Patrick Hand', cursive;
+          background: white;
+          border: 3px solid #2d2d2d;
+          border-radius: 8px;
+          box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.15);
+          position: relative;
+        }
+        
+        .sketch-card::before {
+          content: '★';
+          position: absolute;
+          top: 15px;
+          right: 20px;
+          font-size: 24px;
+          color: #d1d5db;
+        }
+        
+        .sketch-card::after {
+          content: '♥';
+          position: absolute;
+          bottom: 15px;
+          left: 20px;
+          font-size: 20px;
+          color: #fca5a5;
+        }
+        
+        .sketch-title {
+          font-family: 'Caveat', cursive;
+          font-size: 2.5rem;
+          font-weight: 700;
+          text-decoration: underline;
+          text-decoration-style: wavy;
+          text-decoration-thickness: 2px;
+          text-underline-offset: 6px;
+        }
+        
+        .sketch-input {
+          font-family: 'Patrick Hand', cursive;
+          border: 2px solid #2d2d2d;
+          border-radius: 6px;
+          padding: 12px 16px;
+          font-size: 16px;
+          background: white;
+          transition: all 0.2s;
+        }
+        
+        .sketch-input:focus {
+          outline: none;
+          border-color: #2d2d2d;
+          box-shadow: 3px 3px 0px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sketch-input:disabled {
+          background: #f3f4f6;
+          cursor: not-allowed;
+        }
+        
+        .sketch-button {
+          font-family: 'Patrick Hand', cursive;
+          background: #2d2d2d;
+          color: white;
+          border: 3px solid #2d2d2d;
+          border-radius: 8px;
+          padding: 14px 24px;
+          font-size: 18px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sketch-button:hover:not(:disabled) {
+          transform: translate(-2px, -2px);
+          box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sketch-button:active:not(:disabled) {
+          transform: translate(2px, 2px);
+          box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sketch-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+        
+        .sketch-label {
+          font-family: 'Patrick Hand', cursive;
+          font-size: 16px;
+          font-weight: 600;
+          color: #2d2d2d;
+          margin-bottom: 6px;
+          display: block;
+        }
+        
+        .sketch-link {
+          font-family: 'Patrick Hand', cursive;
+          color: #3b82f6;
+          text-decoration: underline;
+          text-decoration-style: wavy;
+          text-underline-offset: 3px;
+        }
+        
+        .sketch-link:hover {
+          color: #2563eb;
+        }
+      `}</style>
+      
+      <div className="sketch-card p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome Back
+          <h1 className="sketch-title text-gray-900 mb-2">
+            Login
           </h1>
-          <p className="text-gray-600">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <Input
-            label="Login ID or Email"
-            name="loginId"
-            type="text"
-            placeholder="Enter your login ID or email"
-            value={formData.loginId}
-            onChange={handleChange}
-            icon={Mail}
-            required
-            disabled={requiresOTP}
-          />
-
-          <Input
-            label="Password"
-            name="password"
-            type="password"
-            placeholder="Enter your password"
-            value={formData.password}
-            onChange={handleChange}
-            icon={Lock}
-            required
-            disabled={requiresOTP}
-          />
-
-          {requiresOTP && (
-            <Input
-              label="OTP"
-              name="otp"
+          <div>
+            <label className="sketch-label">
+              Username
+            </label>
+            <input
+              name="loginId"
               type="text"
-              placeholder="Enter 6-digit OTP"
-              value={formData.otp}
+              placeholder="Enter your username"
+              value={formData.loginId}
               onChange={handleChange}
-              maxLength={6}
+              className="sketch-input w-full"
               required
             />
-          )}
+          </div>
 
-          <Button
+          <div>
+            <label className="sketch-label">
+              Password
+            </label>
+            <input
+              name="password"
+              type="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              className="sketch-input w-full"
+              required
+            />
+          </div>
+
+          <button
             type="submit"
-            variant="primary"
-            fullWidth
-            loading={loading}
-            icon={LogIn}
+            className="sketch-button w-full flex items-center justify-center gap-2"
+            disabled={loading}
           >
-            {requiresOTP ? "Verify OTP & Login" : "Sign In"}
-          </Button>
+            Log In →
+          </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm" style={{ fontFamily: 'Patrick Hand, cursive', color: '#6b7280' }}>
             First time here?{" "}
             <a
               href="/setup-admin"
-              className="text-blue-600 hover:text-blue-700 font-medium"
+              className="sketch-link font-medium"
             >
               Setup Admin Account
             </a>

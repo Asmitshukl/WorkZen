@@ -1,4 +1,3 @@
-// src/components/reports/SalaryStatement.jsx
 import React, { useState } from 'react';
 import { getSalaryStatement } from '@api/reportAPI';
 import { useNotification } from '@hooks/useNotification';

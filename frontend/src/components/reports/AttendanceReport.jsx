@@ -1,4 +1,3 @@
-// src/components/reports/AttendanceReport.jsx
 import React, { useState } from 'react';
 import { getAttendanceSummary } from '@api/reportAPI';
 import { useNotification } from '@hooks/useNotification';

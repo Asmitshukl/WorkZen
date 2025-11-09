@@ -63,7 +63,6 @@ exports.getEmployeeById = async (req, res) => {
   }
 };
 
-// backend/controllers/employeeController.js (Update createEmployee)
 exports.createEmployee = async (req, res) => {
   try {
     const {
@@ -132,9 +131,12 @@ exports.createEmployee = async (req, res) => {
       employeeId: employee.id
     });
     
+    // Auto-verify email for all new employees - no OTP verification needed
+    await User.update(user.id, { isEmailVerified: true });
+    
     await Employee.update(employee.id, { userId: user.id });
 
-    await createAndSendOTP(email, 'signup');
+    // REMOVED: OTP creation - no longer needed
     await sendWelcomeEmail(email, `${firstName} ${lastName}`, loginId, tempPassword);
 
     res.status(201).json({

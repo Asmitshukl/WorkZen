@@ -1,4 +1,3 @@
-// src/hooks/useApi.js
 import { useState, useCallback } from 'react';
 import { useNotification } from './useNotification';
 
