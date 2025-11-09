@@ -9,12 +9,29 @@ import Button from '@components/common/Button';
 import Badge from '@components/common/Badge';
 import { Calendar, Clock, DollarSign, Plane } from 'lucide-react';
 import { formatDate, formatTime, formatCurrency } from '@utils/formatters';
+import { getISTTime, getTodayDateIST } from '@utils/timeZone';
 
 const EmployeeDashboard = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(false);
-  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [todayAttendance, setTodayAttendance] = useState(() => {
+    // Try to get initial state from localStorage
+    const saved = localStorage.getItem('todayAttendance');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only use saved state if it's from today
+        if (parsed.date === getTodayDateIST()) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved attendance:', e);
+      }
+    }
+    return null;
+  });
   const [stats, setStats] = useState({
     attendance: null,
     timeOff: [],
@@ -25,11 +42,20 @@ const EmployeeDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (skipAttendance = false) => {
     try {
-      const today = new Date();
+      const loadingState = !skipAttendance;
+      if (loadingState) setLoading(true);
+      setIsRefreshing(true);
+      
+      const istDate = getISTTime();
+      const todayStr = getTodayDateIST();
+      
       const [attendanceRes, timeOffRes, payslipsRes] = await Promise.all([
-        getMyAttendance({ month: today.getMonth() + 1, year: today.getFullYear() }),
+        getMyAttendance({ 
+          month: istDate.getMonth() + 1, 
+          year: istDate.getFullYear() 
+        }),
         getMyTimeOffRequests(),
         getMyPayslips()
       ]);
@@ -40,22 +66,78 @@ const EmployeeDashboard = () => {
         payslips: payslipsRes.data?.slice(0, 3) || []
       });
 
-      // Find today's attendance
-      const todayStr = today.toISOString().split('T')[0];
-      const todayRecord = attendanceRes.data?.records?.find(r => r.date === todayStr);
-      setTodayAttendance(todayRecord);
+      // Only update attendance if not skipped and we don't have an optimistic update in progress
+      if (!skipAttendance) {
+        const todayRecord = attendanceRes.data?.records?.find(r => r.date === todayStr);
+        
+        if (todayRecord) {
+          // Ensure we preserve check-in/check-out state properly
+          const newAttendance = {
+            ...todayRecord,
+            check_in: todayRecord.check_in || null,
+            check_out: todayRecord.check_out || null,
+            date: todayStr
+          };
+          
+          console.debug('[EmployeeDashboard] Updating attendance from fetch:', newAttendance);
+          
+          // Only update if the state is different
+          setTodayAttendance(prev => {
+            if (!prev || 
+                prev.check_in !== newAttendance.check_in || 
+                prev.check_out !== newAttendance.check_out) {
+              return newAttendance;
+            }
+            return prev;
+          });
+        } else {
+          // If no record exists for today, explicitly set to null
+          setTodayAttendance(null);
+        }
+      }
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     }
+    finally {
+      if (!skipAttendance) setLoading(false);
+      setIsRefreshing(false);
+      console.debug('[EmployeeDashboard] fetchDashboardData finished, skipAttendance=', skipAttendance);
+    }
+  };
+
+  const refreshInBackground = async () => {
+    if (isRefreshing) return;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    await fetchDashboardData(true); // Skip attendance update
   };
 
   const handleCheckIn = async () => {
+    if (loading || isRefreshing) return;
+
     try {
       setLoading(true);
-      await checkIn();
+      const res = await checkIn();
+      console.debug('[EmployeeDashboard] Check-in response:', res.data);
+
+      // Try to extract check-in timestamp from response, fall back to now
+      const checkInTime = res?.data?.check_in || res?.data?.record?.check_in || res?.data?.attendance?.check_in || new Date().toISOString();
+      
+      const newAttendance = {
+        ...(todayAttendance || {}),
+        date: getTodayDateIST(),
+        check_in: checkInTime,
+        check_out: null // Ensure check_out is null when checking in
+      };
+      
+      console.debug('[EmployeeDashboard] Setting attendance to:', newAttendance);
+      // Save to localStorage and state
+      localStorage.setItem('todayAttendance', JSON.stringify(newAttendance));
+      setTodayAttendance(newAttendance);
+
       showSuccess('Checked in successfully');
-      fetchDashboardData();
+      refreshInBackground().catch(console.error);
     } catch (error) {
+      console.error('[EmployeeDashboard] Check-in error:', error);
       showError(error.message || 'Failed to check in');
     } finally {
       setLoading(false);
@@ -63,12 +145,35 @@ const EmployeeDashboard = () => {
   };
 
   const handleCheckOut = async () => {
+    if (loading || isRefreshing) return;
+
     try {
+      if (!todayAttendance?.check_in) {
+        showError('You need to check in first');
+        return;
+      }
+
       setLoading(true);
-      await checkOut();
+      const res = await checkOut();
+      console.debug('[EmployeeDashboard] Check-out response:', res.data);
+
+      const checkOutTime = res?.data?.check_out || res?.data?.record?.check_out || res?.data?.attendance?.check_out || new Date().toISOString();
+
+      const newAttendance = {
+        ...todayAttendance,
+        date: getTodayDateIST(),
+        check_out: checkOutTime
+      };
+
+      console.debug('[EmployeeDashboard] Setting attendance to:', newAttendance);
+      // Save to localStorage and state
+      localStorage.setItem('todayAttendance', JSON.stringify(newAttendance));
+      setTodayAttendance(newAttendance);
+
       showSuccess('Checked out successfully');
-      fetchDashboardData();
+      refreshInBackground().catch(console.error);
     } catch (error) {
+      console.error('[EmployeeDashboard] Check-out error:', error);
       showError(error.message || 'Failed to check out');
     } finally {
       setLoading(false);

@@ -43,3 +43,21 @@ export const downloadPayslipPDF = async (id) => {
 export const getDashboardStats = async () => {
   return await api.get('/payroll/dashboard-stats');
 };
+
+export const getEmployeePayslips = async (employeeId) => {
+  return await api.get(`/payroll/employees/${employeeId}/payslips`);
+};
+
+export const updateEmployeeSalary = async (employeeId, salaryData) => {
+  return await api.put(`/payroll/employees/${employeeId}/salary`, salaryData);
+};
+
+export const getEmployeeAttendance = async (employeeId, month, year) => {
+  return await api.get(`/payroll/employees/${employeeId}/attendance`, {
+    params: { month, year }
+  });
+};
+
+export const processPayrun = async (payrunId) => {
+  return await api.post(`/payroll/payruns/${payrunId}/process`);
+};

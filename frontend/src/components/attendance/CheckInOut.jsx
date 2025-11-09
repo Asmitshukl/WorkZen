@@ -5,31 +5,40 @@ import { useNotification } from '@hooks/useNotification';
 import Button from '@components/common/Button';
 import Card from '@components/common/Card';
 import Badge from '@components/common/Badge';
-import { Clock, LogIn, LogOut } from 'lucide-react';
+import { Clock, LogIn, LogOut, AlertCircle } from 'lucide-react';
 import { formatTime } from '@utils/formatters';
+import { getISTTime, getTodayDateIST, isWorkingHours, getWorkingHoursMessage } from '@utils/timeZone';
 
 const CheckInOut = () => {
   const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState(getISTTime());
+  const [outsideWorkingHours, setOutsideWorkingHours] = useState(!isWorkingHours());
 
   useEffect(() => {
     fetchTodayAttendance();
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => {
+      const istTime = getISTTime();
+      setCurrentTime(istTime);
+      setOutsideWorkingHours(!isWorkingHours());
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
   const fetchTodayAttendance = async () => {
     try {
-      const today = new Date();
+      const istDate = getISTTime();
       const response = await getMyAttendance({
-        month: today.getMonth() + 1,
-        year: today.getFullYear()
+        month: istDate.getMonth() + 1,
+        year: istDate.getFullYear()
       });
-      
-      const todayStr = today.toISOString().split('T')[0];
-      const todayRecord = response.data?.records?.find(r => r.date === todayStr);
+
+      // Support axios response shape: response.data.records
+      const payload = response?.data ?? response;
+      const todayStr = getTodayDateIST();
+      const records = payload?.records ?? [];
+      const todayRecord = records.find(r => r.date === todayStr) || null;
       setTodayAttendance(todayRecord);
     } catch (error) {
       console.error('Failed to fetch attendance:', error);
@@ -37,12 +46,37 @@ const CheckInOut = () => {
   };
 
   const handleCheckIn = async () => {
+    if (loading) return;
+
     try {
+      if (!isWorkingHours()) {
+        showError(getWorkingHoursMessage());
+        return;
+      }
+
+      if (todayAttendance?.check_in) {
+        showError('You have already checked in today');
+        return;
+      }
+
       setLoading(true);
-      await checkIn();
+
+      // Safety timeout: if API doesn't respond within 15s, treat as failure
+      const response = await Promise.race([
+        checkIn(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 15000))
+      ]);
+
+      // Accept axios response or truthy response
+      const ok = response && (response.status === 200 || response.status === 201 || response.data);
+      if (!ok) {
+        throw new Error('Check-in failed');
+      }
+
       showSuccess('Checked in successfully');
-      fetchTodayAttendance();
+      await fetchTodayAttendance();
     } catch (error) {
+      console.error('handleCheckIn error:', error);
       showError(error.message || 'Failed to check in');
     } finally {
       setLoading(false);
@@ -50,12 +84,35 @@ const CheckInOut = () => {
   };
 
   const handleCheckOut = async () => {
+    if (loading) return;
+
     try {
+      if (!todayAttendance?.check_in) {
+        showError('You need to check in first');
+        return;
+      }
+
+      if (todayAttendance?.check_out) {
+        showError('You have already checked out today');
+        return;
+      }
+
       setLoading(true);
-      await checkOut();
+
+      const response = await Promise.race([
+        checkOut(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), 15000))
+      ]);
+
+      const ok = response && (response.status === 200 || response.status === 201 || response.data);
+      if (!ok) {
+        throw new Error('Check-out failed');
+      }
+
       showSuccess('Checked out successfully');
-      fetchTodayAttendance();
+      await fetchTodayAttendance();
     } catch (error) {
+      console.error('handleCheckOut error:', error);
       showError(error.message || 'Failed to check out');
     } finally {
       setLoading(false);

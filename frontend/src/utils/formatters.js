@@ -14,17 +14,22 @@ export const formatDate = (date) => {
   return `${day}/${month}/${year}`;
 };
 
-// Format time to HH:MM AM/PM
+// Format time to HH:MM AM/PM in IST
 export const formatTime = (datetime) => {
   if (!datetime) return '-';
   
   const d = new Date(datetime);
   if (isNaN(d.getTime())) return '-';
   
-  return d.toLocaleTimeString('en-IN', {
+  // Convert to IST
+  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+  const istDate = new Date(utc + (330 * 60000)); // IST = UTC+5:30
+  
+  return istDate.toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: true
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
   });
 };
 
