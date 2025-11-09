@@ -1,5 +1,4 @@
-video links -https://docs.google.com/videos/d/177eylHUiHFJatUaoUhREo45e5-jLXTBcb4vci5Mgc6Q/edit?scene=id.p#scene=id.p
-
+video links -https://youtu.be/gp9PxMkfOZM
 
 🧘‍♂️ WorkZen – Smart Human Resource Management System
 
